@@ -11,11 +11,11 @@ env:
   TF_ROOT:        './terraform'
   PROJECT_NAME:   'foo'
   STAGE:          'dev'
-  REGION:         'us-east-1'
+  AWS_REGION:     'us-east-1'
   AWS_ACCOUNT_ID: '123123123123'
 
 jobs:
-  build-and-test:
+  terraform-continous-integration:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -29,7 +29,7 @@ jobs:
       - name: Configuring S3 Bucket
         id: create-s3-bucket
         run: |
-          BUCKET_NAME=${{ env.PROJECT_NAME}}-${{ env.REGION}}-${{ env.AWS_ACCOUNT_ID}}-tfstates
+          BUCKET_NAME=${{ env.PROJECT_NAME}}-${{ env.AWS_REGION}}-${{ env.AWS_ACCOUNT_ID}}-tfstates
           if aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
             echo "Bucket already exists"
           else
