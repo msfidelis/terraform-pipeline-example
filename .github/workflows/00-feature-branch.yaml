@@ -1,0 +1,65 @@
+name: Terraform - Continuous Integration
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+      - 'hotfix/**'
+      - 'bug/**'
+
+env:
+  TF_ROOT:        './terraform'
+  PROJECT_NAME:   'foo'
+  STAGE:          'dev'
+  REGION:         'us-east-1'
+  AWS_ACCOUNT_ID: '123123123123'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Terraform Setup
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: '1.5.3'
+
+      - name: Configuring S3 Bucket
+        id: create-s3-bucket
+        run: |
+          BUCKET_NAME=${{ env.PROJECT_NAME}}-${{ env.REGION}}-${{ env.AWS_ACCOUNT_ID}}-tfstates
+          if aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
+            echo "Bucket already exists"
+          else
+            aws s3api create-bucket --bucket "$BUCKET_NAME" --region ${{ secrets.AWS_REGION }}
+            aws s3api put-bucket-versioning --bucket "$BUCKET_NAME" --versioning-configuration Status=Enabled
+            aws s3api put-bucket-encryption --bucket "$BUCKET_NAME" --server-side-encryption-configuration '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
+            echo "Bucket created"
+          fi
+          echo "::set-output name=bucket_name::$BUCKET_NAME"
+
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_ROOT }}
+        run: |
+          terraform init -backend-config="bucket=${{ steps.create-s3-bucket.outputs.bucket_name }}" -backend-config="key=${{ env.PROJECT_NAME }}/${{ env.STAGE }}/terraform.tfstate"
+
+      - name: Terraform Format
+        run: terraform fmt -check
+        working-directory: ${{ env.TF_ROOT }}
+
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+        working-directory: ${{ env.TF_ROOT }}
+
+
+      # - name: Configure AWS Credentials
+      #   uses: aws-actions/configure-aws-credentials@v1
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: us-east-1 
+      #     role-to-assume: arn:aws:iam::<AWS_ACCOUNT_ID>:role/<YOUR_ROLE_NAME>
+      #     role-duration-seconds: 1200 
