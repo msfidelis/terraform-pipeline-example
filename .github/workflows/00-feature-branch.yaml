@@ -28,6 +28,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION}}
           role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID}}:role/github-actions-role
+          role-duration-seconds: 3600
           # role-session-name: GitHubActions
 
       - name: Terraform Setup
