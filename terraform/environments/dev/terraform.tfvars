@@ -1,1 +1,1 @@
-project_name = foo
+project_name = "foo"
