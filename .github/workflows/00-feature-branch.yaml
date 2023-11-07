@@ -95,7 +95,7 @@ jobs:
           terraform init -backend-config="bucket=${{ steps.create-s3-bucket.outputs.bucket_name }}" -backend-config="key=${{ env.PROJECT_NAME }}/${{ env.STAGE }}/terraform.tfstate"
 
       - name: Terraform Plan
-        run: terraform plan -out=tfplan -var-file=”terraform/environments/${{ env.STAGE }}/terraform.tfvars”
+        run: terraform plan -out=tfplan -var-file=environments/${{ env.STAGE }}/terraform.tfvars”
         working-directory: ${{ env.TF_ROOT }}
 
   open-pr-to-develop:
