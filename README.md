@@ -38,7 +38,10 @@ For this example, will be created a role named `github-actions-role`.
 			"Principal": {
 				"AWS": "arn:aws:iam::<account-id>:user/github-actions-user"
 			},
-			"Action": "sts:AssumeRole"
+			"Action": [
+                "sts:AssumeRole",
+                "sts:TagSession"
+            ]
 		}
 	]
 }
