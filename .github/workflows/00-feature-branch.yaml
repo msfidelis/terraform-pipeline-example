@@ -63,10 +63,6 @@ jobs:
         run: terraform fmt --recursive --check
         working-directory: ${{ env.TF_ROOT }}
 
-      - name: Terraform Plan
-        run: terraform plan -out=tfplan -var-file=”terraform/environments/${{ env.STAGE }}/terraform.tfvars”
-        working-directory: ${{ env.TF_ROOT }}
-
 
   terraform-plan:
     needs: terraform-continous-integration
