@@ -36,7 +36,7 @@ jobs:
         with:
           terraform_version: '1.5.3'
 
-      - name: Configuring S3 Bucket
+      - name: Configuring S3 bucket and State
         id: create-s3-bucket
         run: |
           BUCKET_NAME=${{ env.PROJECT_NAME}}-${{ env.AWS_REGION}}-${{ env.AWS_ACCOUNT_ID}}-tfstates
@@ -50,14 +50,14 @@ jobs:
           fi
           echo "::set-output name=bucket_name::$BUCKET_NAME"
 
-      - name: Terraform Validate
-        run: terraform validate
-        working-directory: ${{ env.TF_ROOT }}
-
       - name: Terraform Init
         working-directory: ${{ env.TF_ROOT }}
         run: |
           terraform init -backend-config="bucket=${{ steps.create-s3-bucket.outputs.bucket_name }}" -backend-config="key=${{ env.PROJECT_NAME }}/${{ env.STAGE }}/terraform.tfstate"
+
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: ${{ env.TF_ROOT }}
 
       - name: Terraform Format
         run: terraform fmt --recursive --check
