@@ -51,7 +51,7 @@ jobs:
           echo "::set-output name=bucket_name::$BUCKET_NAME"
 
       - name: Terraform Validate
-        run: terraform fmt -check
+        run: terraform validate
         working-directory: ${{ env.TF_ROOT }}
 
       - name: Terraform Init
@@ -60,7 +60,7 @@ jobs:
           terraform init -backend-config="bucket=${{ steps.create-s3-bucket.outputs.bucket_name }}" -backend-config="key=${{ env.PROJECT_NAME }}/${{ env.STAGE }}/terraform.tfstate"
 
       - name: Terraform Format
-        run: terraform fmt -check
+        run: terraform fmt --recursive --check
         working-directory: ${{ env.TF_ROOT }}
 
       - name: Terraform Plan
@@ -68,3 +68,48 @@ jobs:
         working-directory: ${{ env.TF_ROOT }}
 
 
+  terraform-plan:
+    needs: terraform-continous-integration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION}}
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID}}:role/github-actions-role
+          role-duration-seconds: 3600        
+
+      - name: Terraform Setup
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: '1.5.3'
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_ROOT }}
+        run: |
+          terraform init -backend-config="bucket=${{ steps.create-s3-bucket.outputs.bucket_name }}" -backend-config="key=${{ env.PROJECT_NAME }}/${{ env.STAGE }}/terraform.tfstate"
+
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan -var-file=”terraform/environments/${{ env.STAGE }}/terraform.tfvars”
+        working-directory: ${{ env.TF_ROOT }}
+
+  open-pr-to-develop:
+    if: success()
+    needs: terraform-plan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Pull Request to Develop
+        uses: peter-evans/create-pull-request@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Feature implementation"
+          title: "PR from ${GITHUB_REF##*/} to Develop"
+          body: |
+            - Auto-generated PR to merge changes from ${GITHUB_REF##*/} to develop
+          base: develop
+          branch: ${{ github.head_ref }}
